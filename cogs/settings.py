@@ -8,11 +8,12 @@ from libs.namusettingmanager.settingmanager import Settings, Entry, Option
 from libs.namusettingmanager.discordsettingmanager import DiscordSettingManager
 
 class ToggleButton(discord.ui.Button):
-    def __init__(self, store_callback, active: bool, entry: Entry, *, disabled = False, custom_id = None, url = None, emoji = None, sku_id = None, id = None):
+    def __init__(self, store_callback, active: bool, entry: Entry, ephemeral=True, *, disabled = False, custom_id = None, url = None, emoji = None, sku_id = None, id = None):
         super().__init__(style=None, label=None, disabled=disabled, custom_id=custom_id, url=url, emoji=emoji, sku_id=sku_id, id=id)
         self.active = active
         self.store_callback = store_callback
         self.entry = entry
+        self.ephemeral = ephemeral
         self.update_style()
 
     def update_style(self):
