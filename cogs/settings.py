@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from discord import app_commands
-from typing import Union, Optional, List, Any 
+from typing import Union, Optional, List, Any
 
 from libs.namuvaultmanager.vaultmanager import VaultManager, Vault
 from libs.namusettingmanager.settingmanager import Settings, Entry, Option
@@ -38,7 +38,7 @@ class MultiOptionSelectRespond():
         self.options: List[Option] = entry.options
 
         self.single = False
-        if self.options[0].name in ("channelselect",):
+        if self.options[0].name in ("channelselect", "roleselect",):
             self.single = True
 
         self.view = discord.ui.LayoutView()
@@ -124,23 +124,42 @@ class SettingsContainer(discord.ui.Container):
             if entry.options is bool:
                 button = ToggleButton(store_callback=self.store_callback, active=self.vault.get(self.settings.pages[self.current_page].name+entry.name, entry.default), entry=entry)
             if type(entry.options) is list:
-                for option in entry.options:
-                    match option.name:
-                        case "channelselect":
-                            selected, max_value = self.get_selected(entry)
-                            select = discord.ui.ChannelSelect(placeholder="Select Channel...", channel_types=[getattr(discord.ChannelType, e) for e in option.extras], min_values=0, max_values=max_value, default_values=selected[:max_value])
-                            button = MultiOptionButton(edit_callback=self.edit_callback, store_callback=self.store_callback, select=select, selected=selected, entry=entry, ephemeral=self.ephemeral)
-                            select.callback = lambda interaction: button.mosr.select_option(select, interaction)
-                            break
+                option = entry.options[0]
+                match option.name:
+                    case "channelselect":
+                        selected, max_value = self.get_selected(entry, option)
+                        select = discord.ui.ChannelSelect(placeholder="Select Channels...", channel_types=[getattr(discord.ChannelType, e) for e in option.extras], min_values=0, max_values=max_value, default_values=selected[:max_value])
+                        button = MultiOptionButton(edit_callback=self.edit_callback, store_callback=self.store_callback, select=select, selected=selected, entry=entry, ephemeral=self.ephemeral)
+                        select.callback = lambda interaction: button.mosr.select_option(select, interaction)
+                    case "roleselect":
+                        selected, max_value = self.get_selected(entry, option)
+                        select = discord.ui.RoleSelect(placeholder="Select Roles...", min_values=0, max_values=max_value, default_values=selected[:max_value])
+                        button = MultiOptionButton(edit_callback=self.edit_callback, store_callback=self.store_callback, select=select, selected=selected, entry=entry, ephemeral=self.ephemeral)
+                        select.callback = lambda interaction: button.mosr.select_option(select, interaction)
+                    case _:
+                        pass # TODO: add generic option
 
             section = discord.ui.Section(accessory=button).add_item(discord.ui.TextDisplay(f"{entry.title}\n-# {entry.description}"))
             self.add_item(section)
 
-    def get_selected(self, entry: Entry):
-        selected = self.vault.get(self.settings.pages[self.current_page].name+entry.name, entry.default)
-        if type(selected) is not list:
-            selected = [e] if (e := selected) is not None else []
-        selected = [sg for s in selected if (sg := self.interaction.guild.get_channel(s)) is not None]
+    def get_selected(self, entry: Entry, option: Optional[Option]):
+        raw_selected = self.vault.get(self.settings.pages[self.current_page].name+entry.name, entry.default)
+        if type(raw_selected) is not list:
+            raw_selected = [e] if (e := raw_selected) is not None else []
+        
+        selected = []
+        for s in raw_selected:
+            if option is not None:
+                match option.name:
+                    case "channelselect":
+                        if (parsed_selected := self.interaction.guild.get_channel(s)) is not None:
+                            selected.append(parsed_selected)
+                    case "roleselect":
+                        if (parsed_selected := self.interaction.guild.get_role(s)) is not None:
+                            selected.append(parsed_selected)
+            else:
+                selected.append(s)
+
         max_value = 25 if type(entry.default) is list else 1
         
         return (selected, max_value)
@@ -153,12 +172,11 @@ class SettingsContainer(discord.ui.Container):
             await self.vault.store(self.settings.pages[self.current_page].name+button.entry.name, button.active)
         elif button_type is MultiOptionButton:
             match button.entry.options[0].name:
-                case "channelselect":
+                case "channelselect" | "roleselect":
                     selected = [s.id for s in button.mosr.selected]
                     if type(button.entry.default) is not list:
                         selected = selected[0]
                     await self.vault.store(self.settings.pages[self.current_page].name+button.entry.name, selected)
-
         if edit_og:
             interaction = None
 

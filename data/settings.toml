@@ -29,6 +29,23 @@ default     =  []
 options     = {channelselect = {title = "Select Channels", description = "select channels for textbox", extras = ["text"]}}
 permissions = ["manage_channels"]
 
+[server.fun]
+title       = "Fun"
+description = "fun stuff"
+
+[server.fun.bomb]
+title       = "Bomb"
+description = "mutes a user for 1 minute unless if the bomb fails then you get muted for 5 minutes"
+default     =  false
+options     = [true, false]
+
+[server.fun.bomb_role_exception]
+title       = "Bomb Role Exception"
+description = "if a user has the role(s) then they are immune to being bombed"
+default     =  []
+options     = {roleselect = {title = "Select Roles", description = "select exception roles for bomb"}}
+permissions = ["moderate_members"]
+
 [user]
 title       = "User Settings"
 description = "settings that only applies to you"
