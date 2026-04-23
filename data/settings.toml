@@ -38,6 +38,7 @@ title       = "Bomb"
 description = "mutes a user for 1 minute unless if the bomb fails then you get muted for 5 minutes"
 default     =  false
 options     = [true, false]
+permissions = ["moderate_members"]
 
 [server.fun.bomb_role_exception]
 title       = "Bomb Role Exception"
